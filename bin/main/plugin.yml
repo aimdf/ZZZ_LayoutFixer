@@ -1,9 +1,0 @@
-name: ZZZ
-version: 1.0
-main: ZZZ.ZZZ.ZZZ
-api-version: '1.20'
-commands:
-  zzztest:
-    description: Запускает нагрузочный тест плагина
-    usage: /zzztest <запросов/сек> <секунд>
-    permission: zzz.test
