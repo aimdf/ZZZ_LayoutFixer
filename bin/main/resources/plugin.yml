@@ -1,0 +1,4 @@
+name: ZZZ
+version: '1.0-SNAPSHOT'
+main: ZZZ.ZZZ
+api-version: '1.21'
