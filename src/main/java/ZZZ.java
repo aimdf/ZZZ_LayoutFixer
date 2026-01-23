@@ -41,7 +41,7 @@ public final class ZZZ extends JavaPlugin implements Listener {
 
     // Конфигурация защиты от спама
     private static final int MAX_MESSAGES = 4; // Максимальное количество сообщений
-    private static final long TIME_WINDOW_MS = 200; // 2 секунд для подсчета сообщений
+    private static final long TIME_WINDOW_MS = 2000; // 2 секунд для подсчета сообщений
     private static final long BLOCK_DURATION_MS = 20000; // 20 секунд блокировки
 
     @Override
@@ -77,12 +77,11 @@ public final class ZZZ extends JavaPlugin implements Listener {
     public void onPlayerChat(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
         UUID playerId = player.getUniqueId();
-        String playerName = player.getName();
         String originalMessage = event.getMessage();
 
         // Проверяем, не заблокирован ли игрок за спам
         if (isPlayerBlocked(playerId)) {
-            // Игрок заблокирован, не обрабатываем сообщение
+            event.setCancelled(true);
             return;
         }
 
@@ -91,9 +90,8 @@ public final class ZZZ extends JavaPlugin implements Listener {
 
         // Проверяем на спам
         if (checkForSpam(playerId)) {
-            // Блокируем игрока на 20 секунд
             blockPlayer(playerId);
-            // Отправляем предупреждение игроку (синхронно)
+            event.setCancelled(true);
             new BukkitRunnable() {
                 @Override
                 public void run() {
@@ -107,28 +105,38 @@ public final class ZZZ extends JavaPlugin implements Listener {
 
         // Сравниваем, было ли сообщение изменено
         if (!originalMessage.equals(correctedMessage)) {
-            // Если сообщение было изменено, отменяем оригинальное сообщение
+            // Если сообщение было изменено, отменяем оригинальное событие
             event.setCancelled(true);
 
             // Используем синхронный таск для отправки сообщения
             new BukkitRunnable() {
                 @Override
                 public void run() {
-                    // Создаем сообщение с предупреждающим символом
+                    // Получаем формат сообщения из события
+                    String format = event.getFormat();
+
+                    // Заменяем имя игрока и сообщение в формате
+                    String formattedMessage = String.format(
+                            format,
+                            player.getDisplayName(),
+                            correctedMessage
+                    );
+
+                    // Создаем компонент с предупреждающим символом
                     TextComponent finalMessage = Component.text()
                             .append(warningSymbol)
                             .append(Component.text(" "))
-                            .append(Component.text("[" + playerName + "] " + correctedMessage))
+                            .append(Component.text(formattedMessage))
                             .build();
 
-                    // Отправляем сообщение всем игрокам
-                    Bukkit.getOnlinePlayers().forEach(p ->
-                            p.sendMessage(finalMessage));
+                    // Отправляем сообщение всем получателям
+                    for (Player recipient : event.getRecipients()) {
+                        recipient.sendMessage(finalMessage);
+                    }
                 }
             }.runTask(this);
         }
-        // Если сообщение не было изменено, ничего не делаем
-        // (сообщение отправится стандартным способом)
+        // Если сообщение не было изменено, оставляем стандартную обработку
     }
 
     /**
